@@ -1,0 +1,2 @@
+"Method","Tests"
+"Triangle2.classifyTriangle(int,int,int)","Triangle2Test.testInvalidTriangles []"
