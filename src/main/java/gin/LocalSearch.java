@@ -1,13 +1,12 @@
 package gin;
 
+import java.io.Console;
 import java.io.File;
-import java.util.Collections;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
-import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.rng.simple.JDKRandomBridge;
 import org.apache.commons.rng.simple.RandomSource;
+import org.gradle.internal.impldep.org.apache.commons.io.FilenameUtils;
 import org.pmw.tinylog.Logger;
 
 import com.sampullara.cli.Args;
@@ -55,7 +54,7 @@ public class LocalSearch {
     
     @Argument(alias = "et", description = "Edit type: this can be a member of the EditType enum (LINE,STATEMENT,MATCHED_STATEMENT,MODIFY_STATEMENT); the fully qualified name of a class that extends gin.edit.Edit, or a comma separated list of both")
     protected String editType = EditType.LINE.toString();
-    
+
     /**allowed edit types for sampling: parsed from editType*/
     protected List<Class<? extends Edit>> editTypes;
 
@@ -67,6 +66,8 @@ public class LocalSearch {
     public static void main(String[] args) {
         LocalSearch simpleLocalSearch = new LocalSearch(args);
         simpleLocalSearch.search();
+
+        //Logger.info("Arguments passed in: " + Arrays.toString(args));
     }
 
     // Constructor parses arguments
@@ -127,6 +128,8 @@ public class LocalSearch {
     // Simple local search
     private void search() {
 
+        float timeSavingPercentage;
+
         Logger.info(String.format("Localsearch on file: %s method: %s", filename, methodSignature));
 
         // Time original code
@@ -162,14 +165,49 @@ public class LocalSearch {
 
         }
 
+        timeSavingPercentage = 100.0f *((origTime - bestTime)/(1.0f * origTime));
+
         Logger.info(String.format("Finished. Best time: %d (ns), Speedup (%%): %.2f, Patch: %s",
                                     bestTime,
-                                    100.0f *((origTime - bestTime)/(1.0f * origTime)),
+                                    timeSavingPercentage,
                                     bestPatch));
 
-        bestPatch.writePatchedSourceToFile(sourceFile.getFilename() + ".optimised");
 
+        //Write patched source to file if the user is not repeating the program.
+        if (runAgain(timeSavingPercentage))
+        {
+            search();
+        }
+        else
+        {
+            bestPatch.writePatchedSourceToFile(sourceFile.getFilename() + ".optimised");
+        }
     }
+
+    /**
+     * Asks user if they want to repeat the program, and returns "true" if they do.
+     */
+    private boolean runAgain(float timeSavingPercentage)
+    {
+        String userInput;
+        String whatUserHasToTypeToRunTheProgramAgain = "Y";
+
+        //Ask user if they want to re-run the experiment.
+        System.out.println("\nThe time saving achieved on this run was " + timeSavingPercentage + "%.");
+        System.out.println("Do you wish to run another LocalSearch (Y/N)?  If not then the current optimised file will be saved.\n");
+
+        //Read user response.n
+        userInput = System.console().readLine();
+
+        if (userInput.equalsIgnoreCase(whatUserHasToTypeToRunTheProgramAgain))
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }   //runAgain
 
 
     /**
@@ -190,6 +228,5 @@ public class LocalSearch {
         return neighbour;
 
     }
-
 
 }
